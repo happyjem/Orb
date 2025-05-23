@@ -8,12 +8,17 @@ import SwiftUI
 import SpriteKit
 
 class ParticleScene: SKScene {
+#if os(iOS)
     let color: UIColor
+#elseif os(macOS)
+    let color: NSColor
+#endif
     let speedRange: ClosedRange<Double>
     let sizeRange: ClosedRange<CGFloat>
     let particleCount: Int
     let opacityRange: ClosedRange<Double>
     
+    #if os(iOS)
     init(
         size: CGSize,
         color: UIColor,
@@ -32,6 +37,26 @@ class ParticleScene: SKScene {
         backgroundColor = .clear
         setupParticleEmitter()
     }
+    #elseif os(macOS)
+    init(
+        size: CGSize,
+        color: NSColor,
+        speedRange: ClosedRange<Double>,
+        sizeRange: ClosedRange<CGFloat>,
+        particleCount: Int,
+        opacityRange: ClosedRange<Double>
+    ) {
+        self.color = color
+        self.speedRange = speedRange
+        self.sizeRange = sizeRange
+        self.particleCount = particleCount
+        self.opacityRange = opacityRange
+        super.init(size: size)
+        
+        backgroundColor = .clear
+        setupParticleEmitter()
+    }
+    #endif
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -110,18 +135,31 @@ class ParticleScene: SKScene {
         addChild(emitter)
     }
     
+    // 또는 플랫폼 분기를 사용한 버전:
     private func createParticleTexture() -> SKTexture {
-        let size = CGSize(width: 8, height: 8)  // Smaller size for better performance
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let size = CGSize(width: 8, height: 8)
         
+        #if os(iOS)
+        let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { context in
-            // Simple filled white circle
             UIColor.white.setFill()
             let circlePath = UIBezierPath(ovalIn: CGRect(origin: .zero, size: size))
             circlePath.fill()
         }
+        return SKTexture(image: image)
+        
+        #elseif os(macOS)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        
+        NSColor.white.setFill()
+        let circlePath = NSBezierPath(ovalIn: CGRect(origin: .zero, size: size))
+        circlePath.fill()
+        
+        image.unlockFocus()
         
         return SKTexture(image: image)
+        #endif
     }
 }
 
@@ -133,6 +171,7 @@ struct ParticlesView: View {
     let opacityRange: ClosedRange<Double>
     
     var scene: SKScene {
+#if os(iOS)
         let scene = ParticleScene(
             size: CGSize(width: 300, height: 300), // Use fixed size
             color: UIColor(color),
@@ -141,6 +180,16 @@ struct ParticlesView: View {
             particleCount: particleCount,
             opacityRange: opacityRange
         )
+#elseif os(macOS)
+        let scene = ParticleScene(
+            size: CGSize(width: 300, height: 300), // Use fixed size
+            color: NSColor(color),
+            speedRange: speedRange,
+            sizeRange: sizeRange,
+            particleCount: particleCount,
+            opacityRange: opacityRange
+        )
+#endif
         scene.scaleMode = .aspectFit
         return scene
     }
